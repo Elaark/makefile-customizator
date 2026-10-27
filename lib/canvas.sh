@@ -8,10 +8,14 @@ canvas_clear() {        # color
 	for ((i = 0; i < n; i++)); do P[i]=$1; done
 }
 
-rect() {                # x y w h color
-	local x y
-	for ((y = $2; y < $2 + $4; y++)); do
-		for ((x = $1; x < $1 + $3; x++)); do P[y * W + x]=$5; done
+rect() {                # x y w h color, clipped to the grid
+	local x y x0=$1 y0=$2 x1=$(($1 + $3)) y1=$(($2 + $4))
+	((x0 < 0)) && x0=0
+	((y0 < 0)) && y0=0
+	((x1 > W)) && x1=$W
+	((y1 > H)) && y1=$H
+	for ((y = y0; y < y1; y++)); do
+		for ((x = x0; x < x1; x++)); do P[y * W + x]=$5; done
 	done
 }
 
@@ -73,7 +77,7 @@ approach() {
 	local -n v=$1
 	local d s
 	d=$((($5 * ($2 - v) % $3 + 2 * $3) % $3))
-	s=$((d / 4 + 1))
+	s=$((d / 2 + 1))
 	((s > $4)) && s=$4
 	((s > d)) && s=$d
 	v=$(((v + $5 * s + $3) % $3))

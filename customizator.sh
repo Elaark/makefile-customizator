@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Makefile Casino: adds an arcade animation to an existing Makefile.
+# Makefile Customizator: adds an arcade animation to an existing Makefile.
 # Run it and answer the questions; nothing is written before the summary.
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB=$ROOT/lib
 E=$'\e'
-MARKER="MAKEFILE CASINO"
+MARKER="MAKEFILE CUSTOMIZATOR"
 
 ANIMS=(slots roulette russian dice claw rpg)
 ANIM_LABELS=(
@@ -31,8 +31,8 @@ build_runtime() {       # anim theme logs
 	printf '%s\n' \
 		"# $MARKER runtime (animation: $1, theme: $2, logs: $3)" \
 		"# Usage: <runner> [--clean] <command> [args...]" \
-		"# Env:   NO_CASINO=1 to disable, CASINO_LOGS=on|line|off," \
-		"#        CASINO_SPEED=1..6, CASINO_FPS=N" \
+		"# Env:   NO_CUSTOMIZATOR=1 to disable, CUSTOMIZATOR_LOGS=on|line|off," \
+		"#        CUSTOMIZATOR_SPEED=1..6, CUSTOMIZATOR_FPS=N" \
 		"" "LOGS_DEFAULT=$3" ""
 	cat "$LIB/themes/$2.sh"; echo
 	cat "$LIB/canvas.sh"; echo
@@ -52,14 +52,14 @@ embedded_block() {      # anim theme logs
 		"" \
 		"# **************************************************************************** #" \
 		"#   $MARKER - animation: $1, theme: $2, logs: $3" \
-		"#   NO_CASINO=1 make runs without the animation." \
+		"#   NO_CUSTOMIZATOR=1 make runs without the animation." \
 		"# **************************************************************************** #" \
 		"" \
 		"# Kept unexpanded with \$(value) so the script needs no \$\$ escaping" \
-		"define CASINO_RUNTIME_SRC" \
+		"define CUSTOMIZATOR_RUNTIME_SRC" \
 		"$runtime" \
 		"endef" \
-		"export CASINO_RUNTIME := \$(value CASINO_RUNTIME_SRC)"
+		"export CUSTOMIZATOR_RUNTIME := \$(value CUSTOMIZATOR_RUNTIME_SRC)"
 }
 
 ######  MAKEFILE  ######
@@ -145,16 +145,16 @@ gnumakefile() {         # makefile-name first runner wrapped...
 		"#   Delete this file to go back to plain make." \
 		"# **************************************************************************** #" \
 		"" \
-		"CASINO_MAKE = \$(MAKE) --no-print-directory -f $mk" ""
+		"CUSTOMIZATOR_MAKE = \$(MAKE) --no-print-directory -f $mk" ""
 	if [[ $wrapped == *" $first "* ]]; then
 		order=("$first")
 	else
-		printf '%s\n' "casino-default:" $'\t'"@\$(CASINO_MAKE)" ""
+		printf '%s\n' "customizator-default:" $'\t'"@\$(CUSTOMIZATOR_MAKE)" ""
 	fi
 	for name; do [[ $name != "$first" ]] && order+=("$name"); done
 	for name in "${order[@]}"; do
 		[[ $name == all ]] && flag="" || flag="--clean "
-		printf '%s\n' "$name:" $'\t'"@$runner $flag\$(CASINO_MAKE) $name" ""
+		printf '%s\n' "$name:" $'\t'"@$runner $flag\$(CUSTOMIZATOR_MAKE) $name" ""
 	done
 	if [[ $HAS_RE && $wrapped == *" fclean "* && $wrapped == *" all "* ]]; then
 		printf '%s\n' "re:" \
@@ -163,8 +163,8 @@ gnumakefile() {         # makefile-name first runner wrapped...
 	fi
 	printf '%s\n' \
 		"$mk GNUmakefile: ;" "" \
-		"%:" $'\t'"@\$(CASINO_MAKE) \$@" "" \
-		".PHONY: casino-default $* ${HAS_RE:+re}"
+		"%:" $'\t'"@\$(CUSTOMIZATOR_MAKE) \$@" "" \
+		".PHONY: customizator-default $* ${HAS_RE:+re}"
 }
 
 ######  MENUS  ######
@@ -209,7 +209,7 @@ theme_label() {         # theme
 }
 
 banner() {
-	local t="M A K E F I L E   C A S I N O" i c out=""
+	local t="M A K E F I L E   C U S T O M I Z A T O R" i c out=""
 	local colors=(219 213 177 141 135 141 177 213)
 	for ((i = 0; i < ${#t}; i++)); do
 		c=${colors[i % 8]}
@@ -223,11 +223,22 @@ preview() {             # anim theme logs result
 	local tmp cmd
 	tmp=$(mktemp)
 	build_runtime "$1" "$2" "$3" >"$tmp"
+	# fake builds, with enough output to compare the log modes
 	case $4 in
-		win) cmd='for f in main parser lexer utils; do echo "cc -Wall -c srcs/$f.c -o build/$f.o"; sleep 0.4; done' ;;
-		lose) cmd='for f in main parser; do echo "cc -Wall -c srcs/$f.c -o build/$f.o"; sleep 0.4; done
-			echo "srcs/parser.c:42:7: error: expected '"'"';'"'"' after expression"; exit 2' ;;
-		clean) cmd='for f in main parser lexer utils; do echo "removed '"'"'build/$f.o'"'"'"; sleep 0.2; done' ;;
+		win) cmd='for f in main lexer parser eval env builtins signals utils; do
+				echo "cc -Wall -Wextra -Werror -Iincludes -c srcs/$f.c -o build/$f.o"; sleep 0.25
+			done
+			echo "cc build/*.o -o minishell"' ;;
+		lose) cmd='for f in main lexer parser; do
+				echo "cc -Wall -Wextra -Werror -Iincludes -c srcs/$f.c -o build/$f.o"; sleep 0.25
+			done
+			printf "%s\n" "srcs/parser.c:42:17: error: expected '"'"';'"'"' after expression" \
+				"   42 |     node = parse_cmd(tokens)" \
+				"      |                             ^" "1 error generated."
+			exit 2' ;;
+		clean) cmd='for f in main lexer parser eval env builtins signals utils; do
+				echo "removed '"'"'build/$f.o'"'"'"; sleep 0.1
+			done' ;;
 	esac
 	echo
 	if [[ $4 == clean ]]; then
@@ -247,15 +258,15 @@ die() {
 
 main() {
 	local makefile dir mkname scan line wrapped=() first="" anim theme logs
-	local mode placement script="" runner out_file backup="" i ai labels=()
+	local mode placement script="" runner out_file backup="" i ai li labels=()
 
-	[[ -t 0 && -t 1 ]] || die "casino.sh is interactive: run it from a terminal."
+	[[ -t 0 && -t 1 ]] || die "customizator.sh is interactive: run it from a terminal."
 	banner
 
 	printf '\n%s\n' "$E[1mWhich Makefile?$E[0m"
 	read -rep "  path: " -i "Makefile" makefile
 	[[ -f $makefile ]] || die "$makefile: no such file."
-	grep -q "$MARKER" "$makefile" && die "$makefile already has an animation. Start again from the original (or the .casino.bak backup)."
+	grep -q "$MARKER" "$makefile" && die "$makefile already has an animation. Start again from the original (or the .customizator.bak backup)."
 	dir=$(cd "$(dirname "$makefile")" && pwd)
 	mkname=$(basename "$makefile")
 	grep -qs "$MARKER" "$dir/GNUmakefile" &&
@@ -299,8 +310,26 @@ main() {
 		done
 	done
 
-	menu "Build logs?" "${LOG_LABELS[@]}"
-	logs=${LOG_MODES[CHOICE]}
+	while :; do
+		menu "Build logs?" "${LOG_LABELS[@]}"
+		li=$CHOICE
+		logs=${LOG_MODES[li]}
+		while :; do
+			menu "${LOG_LABELS[li]%%  *} logs: preview?" \
+				"Looks good, continue" \
+				"Preview a successful build" \
+				"Preview a failed build" \
+				"Preview a clean" \
+				"Pick another log mode"
+			case $CHOICE in
+				0) break 2 ;;
+				1) preview "$anim" "$theme" "$logs" win ;;
+				2) preview "$anim" "$theme" "$logs" lose ;;
+				3) preview "$anim" "$theme" "$logs" clean ;;
+				4) break ;;
+			esac
+		done
+	done
 
 	menu "How should it be added?" \
 		"$(printf '%-21s' "Rewrite $mkname") all/clean/fclean are renamed and wrapped (a backup is kept)" \
@@ -312,11 +341,11 @@ main() {
 		"In a separate script  the Makefile stays short and readable"
 	if ((CHOICE == 0)); then
 		placement=embedded
-		runner='bash -c "$$CASINO_RUNTIME" casino'
+		runner='bash -c "$$CUSTOMIZATOR_RUNTIME" customizator'
 	else
 		placement=script
 		printf '\n%s\n' "$E[1mScript path, relative to the Makefile?$E[0m"
-		read -rep "  path: " -i "casino.sh" script
+		read -rep "  path: " -i "makefile_anim.sh" script
 		[[ -n $script ]] || die "no script path given."
 		runner="bash $script"
 	fi
@@ -326,14 +355,14 @@ main() {
 	printf '  %-12s %s\n' \
 		"animation" "$anim" "theme" "$theme" "logs" "$logs" "writes" "$out_file"
 	[[ -n $script ]] && printf '  %-12s %s\n' "script" "$dir/$script"
-	[[ $mode == rewrite ]] && printf '  %-12s %s\n' "backup" "$out_file.casino.bak"
+	[[ $mode == rewrite ]] && printf '  %-12s %s\n' "backup" "$out_file.customizator.bak"
 	[[ -e $dir/GNUmakefile && $mode == gnu ]] &&
-		printf '  %-12s %s\n' "replaces" "the existing GNUmakefile (backup: GNUmakefile.casino.bak)"
+		printf '  %-12s %s\n' "replaces" "the existing GNUmakefile (backup: GNUmakefile.customizator.bak)"
 	menu "Write these files?" "Yes" "No, quit without writing"
 	((CHOICE == 0)) || { echo; exit 0; }
 
 	if [[ $mode == rewrite ]]; then
-		backup=$out_file.casino.bak
+		backup=$out_file.customizator.bak
 		cp "$makefile" "$backup" || die "cannot write $backup"
 		{
 			rewrite_makefile "$backup" "$runner" "${wrapped[@]}" &&
@@ -342,9 +371,9 @@ main() {
 				else
 					printf '\n%s\n' "# $MARKER - animation: $anim, theme: $theme, logs: $logs, code in $script"
 				fi
-		} >"$out_file.casino.tmp" && mv "$out_file.casino.tmp" "$out_file" || die "cannot write $out_file"
+		} >"$out_file.customizator.tmp" && mv "$out_file.customizator.tmp" "$out_file" || die "cannot write $out_file"
 	else
-		[[ -e $out_file ]] && { cp "$out_file" "$out_file.casino.bak" || die "cannot back up $out_file"; }
+		[[ -e $out_file ]] && { cp "$out_file" "$out_file.customizator.bak" || die "cannot back up $out_file"; }
 		{
 			gnumakefile "$mkname" "$first" "$runner" "${wrapped[@]}" &&
 				if [[ $placement == embedded ]]; then embedded_block "$anim" "$theme" "$logs"; fi

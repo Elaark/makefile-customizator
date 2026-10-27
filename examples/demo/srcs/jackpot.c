@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "casino.h"
+#include "demo.h"
 
 void	pull_lever(void)
 {

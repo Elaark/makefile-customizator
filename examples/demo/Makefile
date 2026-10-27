@@ -1,4 +1,4 @@
-NAME		=	casino_demo
+NAME		=	demo
 
 SRC_DIR		=	srcs
 INC_DIR		=	includes

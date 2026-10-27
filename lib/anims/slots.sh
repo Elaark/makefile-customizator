@@ -30,7 +30,7 @@ anim_init() {
 	sl_speed=($SPEED $((SPEED + 1)) $SPEED)
 	sl_dir=1
 	((CLEAN)) && sl_dir=-1
-	sl_stop=-1
+	sl_stop=-1 sl_done=(0 0 0)
 }
 
 anim_frame() {
@@ -42,18 +42,19 @@ anim_frame() {
 			clean) sl_target=(5 5 5) ;;    # empty
 			*) sl_target=(1 3 4) ;;
 		esac
-		sl_stop=0
+		sl_stop=$frame
 	fi
 	for ((i = 0; i < 3; i++)); do
-		((sl_stop >= 0 && i < sl_stop)) && continue
-		if ((i == sl_stop)); then
-			approach "sl_off[$i]" $(((sl_target[i] * 8 - 1 + SL_L) % SL_L)) "$SL_L" 5 "$sl_dir" &&
-				((sl_stop++))
+		((sl_done[i])) && continue
+		# reels start stopping a few frames apart, left to right
+		if ((sl_stop >= 0 && frame >= sl_stop + 4 * i)); then
+			approach "sl_off[$i]" $(((sl_target[i] * 8 - 1 + SL_L) % SL_L)) "$SL_L" 6 "$sl_dir" &&
+				sl_done[i]=1
 		else
 			sl_off[i]=$(((sl_off[i] + sl_dir * sl_speed[i] + SL_L) % SL_L))
 		fi
 	done
-	((sl_stop == 3)) && ENDED=1
+	((sl_done[0] && sl_done[1] && sl_done[2])) && ENDED=1
 
 	canvas_clear -1
 	cabinet 27 13

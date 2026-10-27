@@ -7,17 +7,17 @@
 CLEAN=0
 [[ ${1-} == --clean ]] && { CLEAN=1; shift; }
 
-if [[ ! -t 1 || -n ${NO_CASINO-} ]]; then
+if [[ ! -t 1 || -n ${NO_CUSTOMIZATOR-} ]]; then
 	exec "$@"
 fi
 
-LOGS=${CASINO_LOGS:-$LOGS_DEFAULT}
+LOGS=${CUSTOMIZATOR_LOGS:-$LOGS_DEFAULT}
 case $LOGS in on | off | line) ;; *) LOGS=on ;; esac
-SPEED=${CASINO_SPEED:-2}
+SPEED=${CUSTOMIZATOR_SPEED:-2}
 [[ $SPEED =~ ^[0-9]+$ ]] || SPEED=2
 ((SPEED < 1)) && SPEED=1
 ((SPEED > 6)) && SPEED=6
-FPS=${CASINO_FPS:-25}
+FPS=${CUSTOMIZATOR_FPS:-25}
 [[ $FPS =~ ^[1-9][0-9]*$ ]] || FPS=25
 DELAY=$(awk "BEGIN { print 1 / $FPS }")
 COLS=$(stty size </dev/tty 2>/dev/null)
@@ -97,6 +97,8 @@ render() {
 ######  LOOP  ######
 
 frame=0 RESULT="" ENDED=0 rc="" shown=0 removed=0 hold=0 last="" NEW_LOGS=0
+FRAME_US=$((1000000 / FPS))
+tick=${EPOCHREALTIME/[.,]/}
 anim_init
 
 while :; do
@@ -134,9 +136,18 @@ while :; do
 	render
 	printf '%s' "$out$SYNC_OFF"
 
-	((ENDED && ++hold > 8)) && break
+	((ENDED && ++hold > 6)) && break
 	((frame++))
-	sleep "$DELAY"
+	# wait for the rest of the frame (bash 5 knows the time, older ones don't)
+	if [[ -n ${EPOCHREALTIME-} ]]; then
+		now=${EPOCHREALTIME/[.,]/}
+		left=$((FRAME_US - (now - tick)))
+		((left > 0)) && sleep "$(printf '0.%06d' "$left")"
+		tick=$((tick + FRAME_US))
+		((now - tick > FRAME_US)) && tick=$now   # too far behind: resync
+	else
+		sleep "$DELAY"
+	fi
 done
 
 if [[ $LOGS != on ]]; then
