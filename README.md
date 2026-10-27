@@ -46,7 +46,7 @@ make
 | Animation        | While building                          | Success                                  | Failure                                   | Clean                                  |
 | ---------------- | --------------------------------------- | ---------------------------------------- | ----------------------------------------- | -------------------------------------- |
 | Slot machine     | three reels spin, chasing lights        | 7 7 7, `★ JACKPOT ★`                     | a losing combo, `GAME OVER`               | reels spin back to empty               |
-| Roulette         | a prize wheel spins, lights chase on its rim | it stops on a red wedge             | it stops on the green zero                | it spins back, wedges go dark          |
+| Roulette         | a prize wheel spins, its rim lights up  | it stops on a red wedge                  | it stops on the green zero                | it spins back, wedges go dark          |
 | Russian roulette | a big revolver cylinder spins           | it creeps onto an empty chamber: CLICK   | onto the bullet: a flash, then BANG!      | the bullet drops out: EMPTY            |
 | Dice             | two big 3D dice hop and tumble          | they settle on a double six              | snake eyes                                | their faces go blank and fade          |
 | Claw machine     | the claw sweeps, steered by a joystick  | it grabs a prize and drops it in the chute | the prize slips and falls back          | the pile empties                       |
@@ -57,9 +57,9 @@ In the RPG, the knight strikes each time the build prints new lines.
 ## Themes
 
 `purple`, `classic` (red and gold), `neon` (cyan and magenta on a dark
-cabinet), `mono` (greys) and `matrix` (green on black). Every animation is
-set in an arcade cabinet. Themes color the cabinets, lights, frames and
-titles; symbols, dice, prizes and characters
+cabinet), `mono` (greys) and `matrix` (green on black). Every animation
+except the RPG is set in an arcade cabinet with a control panel. Themes color
+the cabinets, lights, frames and titles; symbols, dice, prizes and characters
 keep their own colors.
 
 ## Build logs
@@ -160,7 +160,7 @@ The animation also turns itself off when the output is not a terminal (CI,
 | -------------------- | ------------------------------------------------------ |
 | `customizator.sh`    | the interactive generator                              |
 | `lib/core.sh`        | runs the command, handles logs, drives the animation   |
-| `lib/canvas.sh`      | pixel helpers: rectangles, sprites, cabinet and lights |
+| `lib/canvas.sh`      | pixel helpers: rectangles, sprites, text, cabinet      |
 | `lib/anims/*.sh`     | one file per animation                                 |
 | `lib/themes/*.sh`    | one file per color theme                               |
 | `examples/demo/`     | a small C project with a plain Makefile to try it on   |
@@ -178,5 +178,17 @@ where the result message goes), and two functions:
 - `anim_frame`, called every frame: it reads `RESULT` (empty while the
   command runs, then `win`, `lose` or `clean`), draws into the pixel array
   `P`, and sets `ENDED=1` once its final pose is on screen.
+
+`lib/canvas.sh` provides the drawing helpers:
+
+| Helper                       | Draws                                               |
+| ---------------------------- | --------------------------------------------------- |
+| `canvas_clear color`         | fills the whole canvas (`-1` is transparent)        |
+| `rect x y w h color`         | a filled rectangle, clipped to the canvas           |
+| `sprite x y palette rows…`   | rows of letters mapped to colors by a palette array |
+| `text x y color string`      | words in a 3×5 pixel font (`ABCEGIKLMNPTY!`)        |
+| `cabinet w h`                | the cabinet body with its chasing bulbs             |
+| `panel y`                    | a control panel with a coin slot                    |
+| `approach var target n max d` | eases a position looping over `n` onto a target    |
 
 Then add it to `ANIMS` and `ANIM_LABELS` in `customizator.sh`.
