@@ -46,9 +46,9 @@ make
 | Animation        | While building                          | Success                                  | Failure                                   | Clean                                  |
 | ---------------- | --------------------------------------- | ---------------------------------------- | ----------------------------------------- | -------------------------------------- |
 | Slot machine     | three reels spin, chasing lights        | 7 7 7, `★ JACKPOT ★`                     | a losing combo, `GAME OVER`               | reels spin back to empty               |
-| Roulette         | the wheel turns, the ball runs the rim  | the ball drops into a red pocket         | the ball drops into the green zero        | the wheel stops, its pockets go grey   |
-| Russian roulette | the revolver's cylinder spins           | the hammer falls on an empty chamber     | BANG: muzzle flash, recoil, smoke         | the cylinder swings out, casings drop  |
-| Dice             | a dice cup rattles on the table         | the cup tips over: double six            | snake eyes                                | blank dice roll off the table          |
+| Roulette         | a prize wheel spins, lights chase on its rim | it stops on a red wedge             | it stops on the green zero                | it spins back, wedges go dark          |
+| Russian roulette | a big revolver cylinder spins           | it creeps onto an empty chamber: CLICK   | onto the bullet: a flash, then BANG!      | the bullet drops out: EMPTY            |
+| Dice             | two big 3D dice hop and tumble          | they settle on a double six              | snake eyes                                | their faces go blank and fade          |
 | Claw machine     | the claw sweeps, steered by a joystick  | it grabs a prize and drops it in the chute | the prize slips and falls back          | the pile empties                       |
 | RPG quest        | a knight fights a slime                 | the slime bursts and drops a coin        | the slime leaps onto the knight           | the slime melts away                   |
 
@@ -57,8 +57,9 @@ In the RPG, the knight strikes each time the build prints new lines.
 ## Themes
 
 `purple`, `classic` (red and gold), `neon` (cyan and magenta on a dark
-cabinet), `mono` (greys) and `matrix` (green on black). Themes color the
-cabinets, lights, frames and titles; symbols, dice, prizes and characters
+cabinet), `mono` (greys) and `matrix` (green on black). Every animation is
+set in an arcade cabinet. Themes color the cabinets, lights, frames and
+titles; symbols, dice, prizes and characters
 keep their own colors.
 
 ## Build logs

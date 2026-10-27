@@ -10,9 +10,9 @@ MARKER="MAKEFILE CUSTOMIZATOR"
 ANIMS=(slots roulette russian dice claw rpg)
 ANIM_LABELS=(
 	"Slot machine       7 7 7 on success, a losing combo on failure"
-	"Roulette           the ball lands on red, or on the green zero"
-	"Russian roulette   *click* on success, BANG on failure"
-	"Dice               double six, or snake eyes"
+	"Roulette           a prize wheel stops on red, or on the green zero"
+	"Russian roulette   the cylinder stops on an empty chamber, or BANG"
+	"Dice               two big dice roll a double six, or snake eyes"
 	"Claw machine       grabs the prize, or drops it"
 	"RPG quest          the knight slays the slime, or dies"
 )

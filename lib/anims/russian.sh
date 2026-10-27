@@ -1,170 +1,118 @@
 # ---- animation: russian roulette ----
-# A revolver seen from the side, its cylinder spinning; a strip below shows
-# the six chambers and the one under the hammer. At the end the cylinder
-# ticks slowly into place and the hammer falls: an empty chamber on success
-# (*click*), the bullet on failure (BANG, muzzle flash, smoke). For clean the
-# cylinder swings out and the casings drop.
+# A big revolver cylinder fills the screen of an arcade cabinet, one brass
+# bullet among its six chambers, the firing pin marked on top. At the end it
+# creeps slowly onto a chamber: an empty one on success (CLICK), the bullet
+# on failure (a flash, then BANG!). For clean the bullet drops out (EMPTY).
 
 ANIM_TITLE="RUSSIAN ROULETTE"
 WIN_MSG="*click*  SURVIVED" LOSE_MSG="BANG!" CLEAN_MSG="UNLOADED"
-W=30 H=14 MSG_LINE=3
+W=28 H=18 MSG_LINE=4
 
-declare -A RU_PAL=(
-	[H]=240 [S]=245 [L]=250 [D]=240 [K]=232 [F]=252 [T]=240
-	[W]=94 [G]=130 [B]=58 [Y]=226 [O]=214 [X]=231
-)
-RU_GUN=(
-	".....................F"
-	"...SLLLLLLLLLLLLLLLLLL"
-	"...S......SSSSSSSSSSSK"
-	"...S......SDDDDDDDDDDD"
-	"...S......SD.........."
-	"..WS......S..........."
-	".WGWSSSSSSD..........."
-	".WGW..T..D............"
-	"WGWW..T.D............."
-	"WGW....DD............."
-	"WGW..................."
-	".BB..................."
-)
-RU_FLASH=(
-	"..Y.." ".YOY." "OXXXY" ".YOY." "..Y.."
-)
-RU_FLASH2=(
-	"....." "..O.." ".OXO." "..O.." "....."
-)
-RU_GX=2 RU_GY=1         # gun position; the cylinder is cols 4-9, rows 2-5
-RU_CYL=(252 247 242 238)
+RU_STEPS=36 RU_TOP=27   # rotation steps per turn, step of the firing pin
+
+# Cylinder geometry, computed once: the steel disc with its shading, and
+# where the top-left pixel of a 3x3 chamber sits at each rotation step.
+eval "$(awk -v W=$W -v H=$H 'BEGIN {
+	cx = 14; cy = 8.5; pi = atan2(0, -1)
+	for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
+		dx = x + .5 - cx; dy = y + .5 - cy; r = sqrt(dx * dx + dy * dy)
+		c = -1
+		if (y >= 2 && y <= 14 && r <= 6.6) {
+			s = dx + dy
+			c = r > 5.8 ? 240 : s < -5 ? 251 : s > 5 ? 243 : 247
+			if (r < 1.2) c = 238
+		}
+		D = D " " c
+	}
+	for (i = 0; i < 36; i++) {
+		a = i / 36 * 2 * pi
+		X = X " " int(cx + 4 * cos(a) - 1); Y = Y " " int(cy + 4 * sin(a) - 1)
+	}
+	print "RU_DISC=(" D ")\nRU_CX=(" X ")\nRU_CY=(" Y ")"
+}')"
 
 anim_init() {
-	ru_c=$((RANDOM % 6))  # chamber under the hammer; the bullet is in 0
-	ru_phase=spin ru_t=0 ru_target=-1 ru_wait=0 ru_roll=0
-	ru_puffs=()             # smoke: "x y age" triples
+	ru_a=$((RANDOM % RU_STEPS))     # chamber k sits at step ru_a + 6k
+	ru_phase=spin ru_left=0 ru_t=0 ru_drop=0
+}
+
+chamber() {             # x y loaded
+	if (($3)); then
+		rect "$1" "$2" 3 3 178
+		P[$2 * W + $1]=220
+		P[($2 + 1) * W + $1 + 1]=250    # primer
+	else
+		rect "$1" "$2" 3 3 233
+		P[$2 * W + $1]=236
+	fi
 }
 
 anim_frame() {
-	local x y k c gy=$RU_GY row cx cy i a
+	local i k x y c a want step
 
 	case $ru_phase in
 		spin)
-			ru_roll=$((ru_roll + 1))
-			((frame % 2)) && ru_c=$(((ru_c + 1) % 6))
+			ru_a=$(((ru_a + SPEED) % RU_STEPS))
 			if [[ -n $RESULT ]]; then
-				if [[ $RESULT == clean ]]; then
-					ru_phase=open ru_t=0
-				else
-					# at least one full turn, then slowly onto the chamber
-					[[ $RESULT == lose ]] && a=0 || a=3
-					ru_target=$((6 + (a - ru_c + 6) % 6))
-					ru_phase=tick ru_t=0
-				fi
+				# one more turn, then onto the chosen chamber
+				[[ $RESULT == lose ]] && k=0 || k=$((RANDOM % 5 + 1))
+				want=$(((RU_TOP - 6 * k + 2 * RU_STEPS) % RU_STEPS))
+				ru_left=$(((want - ru_a + RU_STEPS) % RU_STEPS + RU_STEPS))
+				ru_phase=slow
 			fi
 			;;
-		tick)
-			k=$((ru_target - ru_t))     # ticks left
-			if ((k > 3 || ++ru_wait >= (4 - k) * 4)); then
-				ru_wait=0
-				((ru_t++))
-				ru_c=$(((ru_c + 1) % 6))
-				ru_roll=$((ru_roll + 1))
-				((ru_t >= ru_target)) && ru_phase=fire ru_t=0
+		slow)
+			# fast at first, then the last chamber creeps in for suspense
+			if ((ru_left > 12)); then step=2
+			elif ((ru_left > 6)); then step=1
+			else ((frame % 3 == 0)) && step=1 || step=0
 			fi
+			ru_a=$(((ru_a + step) % RU_STEPS))
+			ru_left=$((ru_left - step))
+			((ru_left == 0)) && ru_phase=fire ru_t=0
 			;;
 		fire)
 			((ru_t++))
-			if [[ $RESULT == lose ]] && ((ru_t == 2)); then
-				ru_puffs=("24 2 0" "25 4 1" "23 3 2")
-			fi
-			if [[ $RESULT == win ]] && ((ru_t > 4)); then
-				ENDED=1
-			elif [[ $RESULT == lose ]] && ((ru_t > 14)); then
-				ENDED=1
-			fi
-			;;
-		open)
-			((ru_t++))
-			((ru_t > 6 + 6 * 3 + 10)) && ENDED=1
+			[[ $RESULT == clean ]] && ((ru_drop < 16)) && ((ru_drop++))
+			((ru_t > 10)) && ENDED=1
 			;;
 	esac
 
 	canvas_clear -1
-	cabinet 30 14
+	cabinet 28 16
 	c=$T_SCREEN
-	[[ $ru_phase == fire && $RESULT == lose ]] && ((ru_t >= 2 && ru_t <= 3)) && c=52
-	rect 1 1 28 12 "$c"
+	if [[ $ru_phase == fire && $RESULT == lose ]]; then
+		((ru_t <= 1)) && c=231 || { ((ru_t <= 3)) && c=208 || c=52; }
+	fi
+	rect 1 1 26 14 "$c"
 
-	# recoil: the gun kicks up for two frames after the shot
-	[[ $ru_phase == fire && $RESULT == lose ]] && ((ru_t >= 2 && ru_t <= 3)) && gy=0
-	sprite "$RU_GX" "$gy" RU_PAL "${RU_GUN[@]}"
-
-	# cylinder: shading bands roll as it turns; swung out for clean
-	cy=$((gy + 2))
-	[[ $ru_phase == open ]] && ((ru_t >= 3)) && cy=$((gy + 5))
-	for ((y = 0; y < 4; y++)); do
-		c=${RU_CYL[(y + ru_roll) % 4]}
-		for ((x = 0; x < 6; x++)); do
-			P[(cy + y) * W + RU_GX + 4 + x]=$c
+	if [[ $ru_phase != fire || $RESULT != lose ]]; then
+		for ((i = 2 * W; i < 15 * W; i++)); do
+			((RU_DISC[i] >= 0)) && P[i]=${RU_DISC[i]}
 		done
-		P[(cy + y) * W + RU_GX + 4]=240
-		P[(cy + y) * W + RU_GX + 9]=238
-	done
-
-	# hammer: cocked while spinning, down once fired
-	if [[ $ru_phase == fire || ($ru_phase == open && ru_t -ge 3) ]]; then
-		P[(gy + 1) * W + RU_GX + 2]=240
-		P[gy * W + RU_GX + 3]=240
-	else
-		P[gy * W + RU_GX + 1]=240; P[gy * W + RU_GX + 2]=240
-		P[(gy + 1) * W + RU_GX + 2]=240
-	fi
-
-	if [[ $ru_phase == fire ]]; then
-		if [[ $RESULT == win ]] && ((ru_t <= 3)); then   # click sparks
-			P[gy * W + RU_GX + 1]=255; P[(gy + 2) * W + RU_GX + 1]=255
-			P[(gy + 1) * W + RU_GX]=255
-		elif [[ $RESULT == lose ]] && ((ru_t >= 2 && ru_t <= 3)); then
-			sprite 24 $((gy + 1)) RU_PAL "${RU_FLASH[@]}"
-		elif [[ $RESULT == lose ]] && ((ru_t == 4)); then
-			sprite 24 $((gy + 1)) RU_PAL "${RU_FLASH2[@]}"
-		fi
-	fi
-
-	# smoke puffs drift up and fade
-	for ((i = 0; i < ${#ru_puffs[@]}; i++)); do
-		read -r x y a <<<"${ru_puffs[i]}"
-		((ru_t > 3 && ru_t % 2)) && ((a++)) && ((a % 2)) && ((y--))
-		((a % 3 == 0 && ru_t > 3)) && ((x++))
-		ru_puffs[i]="$x $y $a"
-		((a > 10 || y < 1 || x > 27)) && continue
-		((a < 4)) && c=252 || { ((a < 7)) && c=247 || c=242; }
-		rect "$x" "$y" 2 2 "$c"
-	done
-
-	# chamber strip: bullet in 0, cursor over the chamber under the hammer
-	for ((k = 0; k < 6; k++)); do
-		x=$((12 + k * 3))
-		if ((k == 0)); then
-			if [[ $ru_phase == fire && $RESULT == lose ]] && ((ru_t >= 2)); then
-				rect "$x" 10 2 2 94                     # spent
-			elif [[ $ru_phase == open ]] && ((ru_t >= 6)); then
-				rect "$x" 10 2 2 236                    # ejected
-			else
-				rect "$x" 10 2 2 178; P[10 * W + x]=220
-			fi
-		else
-			rect "$x" 10 2 2 236
-		fi
-	done
-	[[ $ru_phase != open ]] && rect $((12 + ru_c * 3)) 9 2 1 255
-
-	# clean: casings drop out of the open cylinder one after another
-	if [[ $ru_phase == open ]]; then
 		for ((k = 0; k < 6; k++)); do
-			y=$((cy + 2 + ru_t - 6 - k * 3))
-			((y < cy + 2 || y > 12)) && continue
-			x=$((RU_GX + 4 + k))
-			P[y * W + x]=220
-			((y + 1 <= 12)) && P[(y + 1) * W + x]=178
+			a=$(((ru_a + 6 * k) % RU_STEPS))
+			x=${RU_CX[a]} y=${RU_CY[a]}
+			if ((k == 0)) && [[ $RESULT == clean && $ru_phase == fire ]]; then
+				chamber "$x" "$y" 0
+				((y + ru_drop < 15)) && chamber "$x" $((y + ru_drop)) 1   # falls out
+			else
+				chamber "$x" "$y" $((k == 0))
+			fi
 		done
 	fi
+	rect 13 1 3 1 196                       # firing pin marker
+	P[2 * W + 14]=196
+
+	if [[ $ru_phase == fire ]] && ((ru_t >= 2)); then
+		case $RESULT in
+			win) rect 3 6 22 7 "$T_SCREEN"; text 5 7 255 "CLICK" ;;
+			lose) ((ru_t >= 4)) && text 5 7 226 "BANG!" ;;
+			clean) ((ru_drop >= 8)) && { rect 3 6 22 7 "$T_SCREEN"; text 5 7 250 "EMPTY"; } ;;
+		esac
+	fi
+
+	panel 16
+	[[ $ru_phase == fire ]] && c=196 || c=88
+	rect 4 17 3 1 "$c"                      # trigger button
 }

@@ -83,3 +83,33 @@ approach() {
 	v=$(((v + $5 * s + $3) % $3))
 	((d == s))
 }
+
+# 3x5 pixel font, for the few words drawn inside the screens
+declare -A FONT=(
+	[A]=".#. #.# ### #.# #.#" [B]="##. #.# ##. #.# ##." [C]=".## #.. #.. #.. .##"
+	[E]="### #.. ##. #.. ###" [G]=".## #.. #.# #.# .##" [I]="### .#. .#. .#. ###"
+	[K]="#.# #.# ##. #.# #.#" [L]="#.. #.. #.. #.. ###" [M]="#.# ### #.# #.# #.#"
+	[N]="##. #.# #.# #.# #.#" [P]="##. #.# ##. #.. #.." [T]="### .#. .#. .#. .#."
+	[Y]="#.# #.# .#. .#. .#." [!]=".#. .#. .#. ... .#."
+)
+
+text() {                # x y color string
+	local x=$1 i j k ch row
+	for ((i = 0; i < ${#4}; i++)); do
+		ch=${4:i:1}
+		k=0
+		for row in ${FONT[$ch]}; do
+			for ((j = 0; j < 3; j++)); do
+				[[ ${row:j:1} == "#" ]] && ((x + j < W)) && P[($2 + k) * W + x + j]=$3
+			done
+			((k++))
+		done
+		x=$((x + 4))
+	done
+}
+
+# Control panel under a cabinet: two rows with a coin slot.
+panel() {               # y
+	rect 1 "$1" $((W - 2)) 2 "$T_BASE"
+	rect $((W - 9)) $(($1 + 1)) 4 1 236
+}
